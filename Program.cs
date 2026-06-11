@@ -1,5 +1,5 @@
 ﻿using InventoryManagementSystem.UI.Interfaces;
-using InventoryManagementSystem.UI.UI;
+using InventoryManagementSystem.UI.Implementations;
 
 namespace InventoryManagementSystem;
 
