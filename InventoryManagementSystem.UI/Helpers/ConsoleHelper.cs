@@ -1,4 +1,4 @@
-﻿namespace InventoryManagementSystem.UI;
+﻿namespace InventoryManagementSystem.UI.Helpers;
 
 public class ConsoleHelper
 {
