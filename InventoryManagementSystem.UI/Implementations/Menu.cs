@@ -1,9 +1,11 @@
-﻿using InventoryManagementSystem.UI.Interfaces;
+﻿using InventoryManagementSystem.Service.Interfaces;
+using InventoryManagementSystem.UI.Interfaces;
 using InventoryManagementSystem.UI.Helpers;
 namespace InventoryManagementSystem.UI.Implementations;
 
-public class Menu : IMenu
+public class Menu(IInventoryService inventoryService) : IMenu
 {
+    private readonly IInventoryService _inventoryService = inventoryService;
     public void Start()
     {
         while (true)
@@ -59,15 +61,15 @@ public class Menu : IMenu
         string name =  Console.ReadLine() ?? string.Empty;
         decimal price = ConsoleHelper.ReadDecimal("Enter Price: ");
         int quantity = ConsoleHelper.ReadInt("Enter Quantity: ");
-        // !Add Product Logic
+        _inventoryService.AddProduct(name, price, quantity);
         ConsoleHelper.Success("Product added successfully.");
         ConsoleHelper.Pause();
     }
     private void ViewProducts()
     {
         ConsoleHelper.DrawHeader("All Products");
-        var products = new List<string>();
-        if (products.Any())
+        var products = _inventoryService.GetProducts();
+        if (!products.Any())
         {
             ConsoleHelper.Warning("Inventory is empty.");
             ConsoleHelper.Pause();
@@ -82,7 +84,7 @@ public class Menu : IMenu
         int index = 1;
         foreach (var product in products)
         {
-            Console.WriteLine($"│ {index,-2} │ {product,-18} │ {product,-8:F2} │ {product,-8} │");
+            Console.WriteLine($"│ {index,-2} │ {product.Name,-18} │ {product.Price,-8:F2} │ {product.Quantity,-8} │");
             index++;
         }
         Console.WriteLine("└────┴────────────────────┴──────────┴──────────┘");
@@ -93,13 +95,19 @@ public class Menu : IMenu
         ConsoleHelper.DrawHeader("Search Product");
         Console.Write("Product Name: ");
         string name = Console.ReadLine() ?? string.Empty;
-        // !Search Product Logic
+        var product =  _inventoryService.SearchProduct(name);
+        if (product is null)
+        {
+            ConsoleHelper.Error("Product not found.");
+            ConsoleHelper.Pause();
+            return;
+        }
         ConsoleHelper.Success("Product found.");
         Console.WriteLine();
         Console.WriteLine($"""
-                            Name     : {name}
-                            Price    : {2.5:F2}
-                            Quantity : {2}
+                            Name     : {product.Name}
+                            Price    : {product.Price:F2}
+                            Quantity : {product.Quantity}
                             """);
         ConsoleHelper.Pause();
     }
@@ -108,8 +116,8 @@ public class Menu : IMenu
         ConsoleHelper.DrawHeader("Delete Product");
         Console.Write("Product Name: ");
         string name = Console.ReadLine() ?? string.Empty;
-        // !Delete Product Logic
-        if(true)
+        bool isDeleted = _inventoryService.DeleteProduct(name);
+        if(isDeleted)
             ConsoleHelper.Success("Product deleted successfully.");
         else ConsoleHelper.Error("Product not found");
         ConsoleHelper.Pause();
@@ -119,8 +127,8 @@ public class Menu : IMenu
         ConsoleHelper.DrawHeader("Edit Product");
         Console.Write("Product Name: ");
         string oldName =  Console.ReadLine() ?? string.Empty;
-        // !Search Product Logic
-        if (false)
+        var existing = _inventoryService.SearchProduct(oldName);
+        if (existing is null)
         {
             ConsoleHelper.Error("Product not found.");
             ConsoleHelper.Pause();
@@ -130,17 +138,17 @@ public class Menu : IMenu
         Console.WriteLine($"""
                           
                           Current Values
-                          Name     : {oldName}
-                          Price    : {2.5:F2}
-                          Quantity : {2}
+                          Name     : {existing.Name}
+                          Price    : {existing.Price:F2}
+                          Quantity : {existing.Quantity}
                           """);
         Console.WriteLine("───────────────────────────────────────");
         Console.Write("New Name: ");
         string newName = Console.ReadLine() ?? string.Empty;
         decimal newPrice = ConsoleHelper.ReadDecimal("Enter Price: ");
         int newQuantity = ConsoleHelper.ReadInt("Enter Quantity: ");
-        // !Edit Product Logic
-        if(true)
+        bool isUpdated = _inventoryService.UpdateProduct(oldName, newName, newPrice, newQuantity);
+        if(isUpdated)
             ConsoleHelper.Success("Product edited successfully.");
         else ConsoleHelper.Error("Update failed.");
         ConsoleHelper.Pause();
