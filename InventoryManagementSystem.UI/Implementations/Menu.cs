@@ -1,6 +1,6 @@
 ﻿using InventoryManagementSystem.UI.Interfaces;
-
-namespace InventoryManagementSystem.UI.UI;
+using InventoryManagementSystem.UI.Helpers;
+namespace InventoryManagementSystem.UI.Implementations;
 
 public class Menu : IMenu
 {
