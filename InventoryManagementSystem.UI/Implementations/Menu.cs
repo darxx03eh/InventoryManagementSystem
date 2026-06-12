@@ -1,6 +1,8 @@
 ﻿using InventoryManagementSystem.Service.Interfaces;
 using InventoryManagementSystem.UI.Interfaces;
 using InventoryManagementSystem.UI.Helpers;
+using Spectre.Console;
+
 namespace InventoryManagementSystem.UI.Implementations;
 
 public class Menu(IInventoryService inventoryService) : IMenu
@@ -10,32 +12,37 @@ public class Menu(IInventoryService inventoryService) : IMenu
     {
         while (true)
         {
-            DisplayMenu();
-            string? choice = Console.ReadLine();
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[cyan]Inventory Management System[/]")
+                    .PageSize(6)
+                    .AddChoices(
+                        "Add Product",
+                        "View Products",
+                        "Edit Product",
+                        "Delete Product",
+                        "Search Product",
+                        "Exit"));
             switch (choice)
             {
-                case "1":
+                case "Add Product":
                     AddProduct();
                     break;
-                case "2":
+                case "View Products":
                     ViewProducts();
                     break;
-                case "3":
+                case "Edit Product":
                     EditProduct();
                     break;
-                case "4":
+                case "Delete Product":
                     DeleteProduct();
                     break;
-                case "5":
+                case "Search Product":
                     SearchProduct();
                     break;
-                case "6":
+                case "Exit":
                     ExitApplication();
                     return;
-                default:
-                    ConsoleHelper.Error("Invalid option!");
-                    ConsoleHelper.Pause();
-                    break;
             }
         }
     }
@@ -56,108 +63,139 @@ public class Menu(IInventoryService inventoryService) : IMenu
     }
     private void AddProduct()
     {
-        ConsoleHelper.DrawHeader("Add Product");
-        Console.Write("Product Name: ");
-        string name =  Console.ReadLine() ?? string.Empty;
-        decimal price = ConsoleHelper.ReadDecimal("Enter Price: ");
-        int quantity = ConsoleHelper.ReadInt("Enter Quantity: ");
+        var name = AnsiConsole.Ask<string>("Enter [green]Product Name[/]: ");
+        var price = AnsiConsole.Prompt(
+            new TextPrompt<decimal>("Enter [yellow]Price[/]: ")
+                .ValidationErrorMessage("[red]Invalid price[/]")
+                .Validate(price => price > 0));
+        var quantity = AnsiConsole.Prompt(
+            new TextPrompt<int>("Enter [yellow]Quantity[/]: ")
+                .ValidationErrorMessage("[red]Invalid quantity[/]")
+                .Validate(quantity => quantity >= 0));
         _inventoryService.AddProduct(name, price, quantity);
-        ConsoleHelper.Success("Product added successfully.");
-        ConsoleHelper.Pause();
+        AnsiConsole.MarkupLine("[green]✔ Product added successfully[/]");
+        if(AnsiConsole.Confirm("Continue?"))
+            AddProduct();
+        return;
     }
     private void ViewProducts()
     {
-        ConsoleHelper.DrawHeader("All Products");
         var products = _inventoryService.GetProducts();
         if (!products.Any())
         {
-            ConsoleHelper.Warning("Inventory is empty.");
-            ConsoleHelper.Pause();
+            AnsiConsole.MarkupLine("[yellow]No products available[/]");
             return;
         }
 
-        Console.WriteLine("""
-                          ┌────┬────────────────────┬──────────┬──────────┐
-                          │ #  │ Name               │ Price    │ Quantity │
-                          ├────┼────────────────────┼──────────┼──────────┤
-                          """);
-        int index = 1;
-        foreach (var product in products)
+        var table = new Table();
+        table.Border(TableBorder.Rounded);
+        table.AddColumn(new TableColumn("[cyan]Name[/]").Centered());
+        table.AddColumn(new TableColumn("[cyan]Price[/]").Centered());
+        table.AddColumn(new TableColumn("Quantity").Centered());
+        foreach(var product in products)
+            table.AddRow(product.Name, $"{product.Price}", $"{product.Quantity}");
+        AnsiConsole.Write(table);
+        AnsiConsole.WriteLine();
+        if (AnsiConsole.Confirm("Back?"))
         {
-            Console.WriteLine($"│ {index,-2} │ {product.Name,-18} │ {product.Price,-8:F2} │ {product.Quantity,-8} │");
-            index++;
+            AnsiConsole.Clear();
+            return;
         }
-        Console.WriteLine("└────┴────────────────────┴──────────┴──────────┘");
-        ConsoleHelper.Pause();
+        ViewProducts();
     }
     private void SearchProduct()
     {
-        ConsoleHelper.DrawHeader("Search Product");
-        Console.Write("Product Name: ");
-        string name = Console.ReadLine() ?? string.Empty;
-        var product =  _inventoryService.SearchProduct(name);
+        var name = AnsiConsole.Ask<string>("Enter [green]Product Name[/]: ");
+        var product = _inventoryService.SearchProduct(name);
         if (product is null)
         {
-            ConsoleHelper.Error("Product not found.");
-            ConsoleHelper.Pause();
-            return;
-        }
-        ConsoleHelper.Success("Product found.");
-        Console.WriteLine();
-        Console.WriteLine($"""
-                            Name     : {product.Name}
-                            Price    : {product.Price:F2}
-                            Quantity : {product.Quantity}
-                            """);
-        ConsoleHelper.Pause();
-    }
-    private void DeleteProduct()
-    {
-        ConsoleHelper.DrawHeader("Delete Product");
-        Console.Write("Product Name: ");
-        string name = Console.ReadLine() ?? string.Empty;
-        bool isDeleted = _inventoryService.DeleteProduct(name);
-        if(isDeleted)
-            ConsoleHelper.Success("Product deleted successfully.");
-        else ConsoleHelper.Error("Product not found");
-        ConsoleHelper.Pause();
-    }
-    private void EditProduct()
-    {
-        ConsoleHelper.DrawHeader("Edit Product");
-        Console.Write("Product Name: ");
-        string oldName =  Console.ReadLine() ?? string.Empty;
-        var existing = _inventoryService.SearchProduct(oldName);
-        if (existing is null)
-        {
-            ConsoleHelper.Error("Product not found.");
-            ConsoleHelper.Pause();
+            AnsiConsole.MarkupLine("[red]Product not found[/]");
             return;
         }
 
-        Console.WriteLine($"""
-                          
-                          Current Values
-                          Name     : {existing.Name}
-                          Price    : {existing.Price:F2}
-                          Quantity : {existing.Quantity}
-                          """);
-        Console.WriteLine("───────────────────────────────────────");
-        Console.Write("New Name: ");
-        string newName = Console.ReadLine() ?? string.Empty;
-        decimal newPrice = ConsoleHelper.ReadDecimal("Enter Price: ");
-        int newQuantity = ConsoleHelper.ReadInt("Enter Quantity: ");
-        bool isUpdated = _inventoryService.UpdateProduct(oldName, newName, newPrice, newQuantity);
+        var panel = new Panel($"""
+                               [green]Name: [/] {product.Name}
+                               [yellow]Price: [/] {product.Price}
+                               [blue]Quantity: [/] {product.Quantity}
+                               """)
+        {
+            Header = new PanelHeader("Product Details"),
+            Border = BoxBorder.Double
+        };
+        AnsiConsole.Write(panel);
+        if (AnsiConsole.Confirm("Back?"))
+        {
+            AnsiConsole.Clear();
+            return;
+        }
+        SearchProduct();
+    }
+    private void DeleteProduct()
+    {
+        var name = AnsiConsole.Ask<string>("Enter [green]Product Name[/]: ");
+        var isDeleted = _inventoryService.DeleteProduct(name);
+        if(isDeleted)
+            AnsiConsole.MarkupLine("[green]✔ Deleted successfully[/]");
+        else AnsiConsole.MarkupLine("[red]✖ Product not found[/]");
+        if (AnsiConsole.Confirm("Back?"))
+        {
+            AnsiConsole.Clear();
+            return;
+        }
+        DeleteProduct();
+    }
+    private void EditProduct()
+    {
+        var oldName =  AnsiConsole.Ask<string>("Enter [green]Product Name[/] to edit: ");
+        var product = _inventoryService.SearchProduct(oldName);
+        if (product is null)
+        {
+            AnsiConsole.MarkupLine("[red]Product not found[/]");
+            return;
+        }
+        var newName = AnsiConsole.Ask<string>("Enter [green]New Name[/]: ");
+        var newPrice = AnsiConsole.Prompt(
+            new TextPrompt<decimal>("Enter new [yellow]Price[/]: ")
+                .ValidationErrorMessage("[red]Invalid price[/]")
+                .Validate(price => price > 0));
+        var newQuantity = AnsiConsole.Prompt(
+            new TextPrompt<int>("Enter new [yellow]Quantity[/]: ")
+                .ValidationErrorMessage("[red]Invalid quantity[/]")
+                .Validate(quantity => quantity >= 0));
+        var isUpdated = _inventoryService.UpdateProduct(oldName, newName, newPrice, newQuantity);
         if(isUpdated)
-            ConsoleHelper.Success("Product edited successfully.");
-        else ConsoleHelper.Error("Update failed.");
-        ConsoleHelper.Pause();
+            AnsiConsole.MarkupLine("[green]✔ Updated successfully[/]");
+        else AnsiConsole.MarkupLine("[red]✖ Product not found[/]");
+        if (AnsiConsole.Confirm("Back?"))
+        {
+            AnsiConsole.Clear();
+            return;
+        }
+        EditProduct();
     }
     private void ExitApplication()
     {
-        ConsoleHelper.DrawHeader("Goodbye");
-        ConsoleHelper.Success("Thank you for using Inventory Management System.");
-        Thread.Sleep(1500);
+        AnsiConsole.Clear();
+
+        var rule = new Rule("[yellow]Goodbye[/]");
+        rule.Justification = Justify.Center;
+
+        AnsiConsole.Write(rule);
+
+        AnsiConsole.MarkupLine("");
+        AnsiConsole.MarkupLine("[green]Thank you for using Inventory Management System![/]");
+        AnsiConsole.MarkupLine("[grey]See you next time.[/]");
+        AnsiConsole.MarkupLine("");
+
+        AnsiConsole.Status()
+            .Spinner(Spinner.Known.Star)
+            .Start("Saving session...", _ =>
+            {
+                Thread.Sleep(1200);
+            });
+
+        Thread.Sleep(1000);
+
         Environment.Exit(0);
     }
 }

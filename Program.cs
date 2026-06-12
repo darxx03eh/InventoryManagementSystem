@@ -4,6 +4,7 @@ using InventoryManagementSystem.Service.Implementations;
 using InventoryManagementSystem.Service.Interfaces;
 using InventoryManagementSystem.UI.Interfaces;
 using InventoryManagementSystem.UI.Implementations;
+using Spectre.Console;
 
 namespace InventoryManagementSystem;
 
@@ -20,16 +21,10 @@ class Program
         }
         catch (Exception exp)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"""
-                               Critical error occured!
-                               {exp.Message}")"
-                               """);
-            Console.ResetColor();
-        }
-        finally
-        {
-            Console.WriteLine("\nApplication closed.");
+            AnsiConsole.MarkupLine($"""
+                                    [yellow]Critical error occured![/]
+                                    [red]{Markup.Escape(exp.Message)}[/]
+                                    """);
         }
     }
 }
