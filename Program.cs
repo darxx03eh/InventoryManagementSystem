@@ -10,21 +10,49 @@ namespace InventoryManagementSystem;
 
 class Program
 {
-    static void Main(string[] args)
+    static int Main(string[] args)
     {
         try
         {
+            Console.Title = "Inventory Management System";
+
             IProductRepository productRepository = new ProductRepository();
             IInventoryService inventoryService = new InventoryService(productRepository);
             IMenu menu = new Menu(inventoryService);
             menu.Start();
+
+            return 0;
         }
         catch (Exception exp)
         {
-            AnsiConsole.MarkupLine($"""
-                                    [yellow]Critical error occured![/]
-                                    [red]{Markup.Escape(exp.Message)}[/]
-                                    """);
+            AnsiConsole.Clear();
+            AnsiConsole.Write(
+                new Panel($"""
+                           [red]{Markup.Escape(exp.Message)}[/]
+
+                           [grey]The application stopped unexpectedly. Restart the app and try again.[/]
+                           """)
+                {
+                    Header = new PanelHeader("[bold red]Fatal Error[/]"),
+                    Border = BoxBorder.Double,
+                    BorderStyle = Style.Parse("red"),
+                    Padding = new Padding(1, 1)
+                });
+
+            if (!string.IsNullOrWhiteSpace(exp.StackTrace))
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.Write(
+                    new Panel(Markup.Escape(exp.StackTrace))
+                    {
+                        Header = new PanelHeader("[grey]Diagnostic Details[/]"),
+                        Border = BoxBorder.Rounded,
+                        BorderStyle = Style.Parse("grey"),
+                        Padding = new Padding(1, 0)
+                    });
+            }
+
+            return 1;
         }
     }
 }
