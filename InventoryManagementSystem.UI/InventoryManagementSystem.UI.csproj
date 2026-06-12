@@ -10,4 +10,8 @@
       <ProjectReference Include="..\InventoryManagementSystem.Service\InventoryManagementSystem.Service.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Spectre.Console" Version="0.56.0" />
+    </ItemGroup>
+
 </Project>
