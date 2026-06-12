@@ -1,65 +1,103 @@
-﻿namespace InventoryManagementSystem.UI.Helpers;
+using Spectre.Console;
 
-public class ConsoleHelper
+namespace InventoryManagementSystem.UI.Helpers;
+
+public static class ConsoleHelper
 {
-    public static void DrawHeader(string title)
+    public static void PlayStartupAnimation()
     {
-        Console.Clear();
-        Console.ForegroundColor = ConsoleColor.Cyan;
-        Console.WriteLine($"""
-                            ╔══════════════════════════════════════╗
-                            ║ {title.PadRight(36)} ║
-                            ╚══════════════════════════════════════╝
-                            """);
-        Console.ResetColor();
-        Console.WriteLine();
+        AnsiConsole.Clear();
+        DrawBanner();
+
+        AnsiConsole.Progress()
+            .AutoClear(true)
+            .HideCompleted(true)
+            .Columns(
+                new SpinnerColumn { Style = Style.Parse("cyan") },
+                new TaskDescriptionColumn(),
+                new ProgressBarColumn { CompletedStyle = Style.Parse("cyan") },
+                new PercentageColumn())
+            .Start(context =>
+            {
+                var task = context.AddTask("[cyan]Preparing inventory workspace[/]", maxValue: 100);
+
+                while (!task.IsFinished)
+                {
+                    task.Increment(20);
+                    Thread.Sleep(120);
+                }
+            });
     }
 
-    public static void Success(string message)
+    public static void DrawShell(string section)
     {
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.Write($"✔ {message}");
-        Console.ResetColor();
+        AnsiConsole.Clear();
+        DrawBanner();
+
+        AnsiConsole.Write(
+            new Rule($"[bold yellow]{Markup.Escape(section)}[/]")
+                .RuleStyle("yellow")
+                .LeftJustified());
+        AnsiConsole.WriteLine();
     }
 
-    public static void Error(string message)
+    public static void DrawSectionIntro(string title, string description, string color)
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"✖ {message}");
-        Console.ResetColor();
+        AnsiConsole.Write(
+            new Panel(new Markup($"[bold]{Markup.Escape(title)}[/]\n[grey]{Markup.Escape(description)}[/]"))
+            {
+                Border = BoxBorder.Rounded,
+                BorderStyle = Style.Parse(color),
+                Padding = new Padding(1, 0)
+            });
+        AnsiConsole.WriteLine();
     }
 
-    public static void Warning(string message)
+    public static void SuccessPanel(string title, string message)
     {
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine($"⚠ {message}");
-        Console.ResetColor();
+        WriteMessagePanel(title, message, "green", BoxBorder.Rounded);
+    }
+
+    public static void WarningPanel(string title, string message)
+    {
+        WriteMessagePanel(title, message, "yellow", BoxBorder.Rounded);
+    }
+
+    public static void ErrorPanel(string title, string message)
+    {
+        WriteMessagePanel(title, message, "red", BoxBorder.Double);
     }
 
     public static void Pause()
     {
-        Console.WriteLine();
-        Console.WriteLine("Press any key to continue...");
-        Console.ReadLine();
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("[grey]Press any key to return to the dashboard.[/]");
+        Console.ReadKey(intercept: true);
     }
 
-    public static decimal ReadDecimal(string message)
+    private static void DrawBanner()
     {
-        decimal value;
-        do
-        {
-            Console.Write(message);
-        } while (!decimal.TryParse(Console.ReadLine(), out value));
-        return  value;;
+        AnsiConsole.Write(
+            new FigletText("IMS")
+                .Color(Color.Cyan1));
+
+        AnsiConsole.Write(new Rule("[bold white]Inventory Management System[/] [grey]|[/] [cyan]Console Operations[/]")
+            .RuleStyle("cyan")
+            .Centered());
+        AnsiConsole.WriteLine();
     }
 
-    public static int ReadInt(string message)
+    private static void WriteMessagePanel(string title, string message, string color, BoxBorder border)
     {
-        int value;
-        do
-        {
-            Console.Write(message);
-        } while (!int.TryParse(Console.ReadLine(), out value));
-        return value;
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(
+            new Panel(Markup.Escape(message))
+            {
+                Header = new PanelHeader($"[bold {color}]{Markup.Escape(title)}[/]"),
+                Border = border,
+                BorderStyle = Style.Parse(color),
+                Padding = new Padding(1, 0)
+            });
+        AnsiConsole.WriteLine();
     }
 }
